@@ -1,0 +1,68 @@
+#!/bin/bash
+#
+#       /etc/rc.d/init.d/gp200
+# gp200      This shell script takes care of starting and stopping
+#               gp200-listener
+#
+# Borrowed from http://www.linux.com/articles/46892
+#
+# chkconfig: 2345 13 87
+# description: gp200-listener :  listener for incoming GP200 tracker packets \
+# packets are decoded and stored in a database \
+#
+
+# Source function library.
+. /etc/init.d/functions
+
+GP200_HOST=`hostname -a`
+GP200_DIR=/opt/GP200-Listener
+PIDFILE=$GP200_DIR/logs/pid
+STARTPIDFILE=$GP200_DIR/logs/startpid
+
+start() {
+        echo -n "Starting GP200-Listener Server: "
+        if [ -f $STARTPIDFILE ]; then
+                PID=`cat $STARTPIDFILE`
+                echo gp200 already running: $PID
+                exit 2;
+        elif [ -f $PIDFILE ]; then
+                PID=`cat $PIDFILE`
+                echo gp200 already running: $PID
+                exit 2;
+        else
+                cd $GP200_DIR
+                daemon  "/usr/bin/perl ${GP200_DIR}/bin/gp200-listener.pl --daemon --noverbose --loglevel=0" $OPTIONS
+                RETVAL=$?
+                echo
+                [ $RETVAL -eq 0 ] && touch /var/lock/subsys/gp200
+                return $RETVAL
+        fi
+
+}
+
+stop() {
+        echo -n "Shutting down GP200-Listener Server: "
+        echo
+        killproc gp200-listener.pl
+        echo
+        rm -f /var/lock/subsys/gp200
+        return 0
+}
+
+case "$1" in
+    start)
+        start
+        ;;
+    stop)
+        stop
+        ;;
+    restart)
+        stop
+        start
+        ;;
+    *)
+        echo "Usage:  {start|stop|restart}"
+        exit 1
+        ;;
+esac
+exit $?
